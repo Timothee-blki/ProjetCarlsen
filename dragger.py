@@ -9,8 +9,8 @@ class Dragger:
         self.x = 0
         self.y = 0
 
-    def update_drag_position(self,position):
-        self.x,self.y = position
+    def update_drag_position(self,position,player_color):
+            self.x,self.y = position
 
     def start_drag(self,sel_piece):
         self.dragging = True

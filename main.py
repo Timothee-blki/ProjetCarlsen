@@ -46,6 +46,7 @@ class Main():
 
 
 
+
             ### CONTROLE D'EVENEMENT ###
 
             for event in pygame.event.get():
@@ -56,8 +57,12 @@ class Main():
                     #Calcul de la case (row,col) de la position cliquée
                     position = event.pos #recup position
                     
-                    clicked_row = int(position[1]//square_size) #Ligne
-                    clicked_col = int(position[0]//square_size) #Colonne
+                    if game.player_color == 'white':
+                        clicked_row = int(position[1]//square_size) #Ligne
+                        clicked_col = int(position[0]//square_size) #Colonne
+                    else:
+                        clicked_row = 7-int(position[1]//square_size) #Ligne
+                        clicked_col = 7-int(position[0]//square_size) #Colonne
 
                     
                     if game.promoting:
@@ -69,7 +74,7 @@ class Main():
 
                     #Si on selectionne une pièce, on la garde en mémoire
                     elif self.game.board.squares[clicked_row][clicked_col].piece != None and self.game.board.squares[clicked_row][clicked_col].piece.color == game.next_player:
-                        dragger.update_drag_position(position) #update la position de la case cliquée
+                        dragger.update_drag_position(position,game.next_player) #update la position de la case cliquée
                         dragger.piece = self.game.board.squares[clicked_row][clicked_col].piece
                         dragger.start_drag(dragger.piece) # On indique qu'on a commencé à deplacer une piece
                         board.calculate_possible_moves(dragger.piece) # on calcule les déplacements possibles de la piece
@@ -80,8 +85,12 @@ class Main():
 
                     #Calcul de la case (row,col) de la position décliquée
                     position = event.pos #recup position
-                    declicked_row = int(position[1]//square_size) #Ligne
-                    declicked_col = int(position[0]//square_size) #Colonne
+                    if game.player_color == 'white':
+                        declicked_row = int(position[1]//square_size) #Ligne
+                        declicked_col = int(position[0]//square_size) #Colonne
+                    else:
+                        declicked_row = 7-int(position[1]//square_size) #Ligne
+                        declicked_col = 7-int(position[0]//square_size) #Colonne
  
 
                     #Si une autre case est selectionnée, on déplace la piece cliquée sur cette case
@@ -101,7 +110,7 @@ class Main():
                 # 3) Souris en mouvement 
                 if event.type == pygame.MOUSEMOTION:
                     if dragger.dragging:
-                        dragger.update_drag_position(event.pos)
+                        dragger.update_drag_position(event.pos,game.player_color)
                 
                 # 4) Touche appuyée
                 if event.type == pygame.KEYDOWN : 
@@ -122,7 +131,8 @@ class Main():
                         dragger = self.game.dragger
 
                         #change la couleur
-                        game.player_color = 'black'
+                        game.player_color = 'black' if game.player_color == 'white' else 'white'
+                        print(game.player_color)
 
                 # 5) Quitter
                 if event.type == pygame.QUIT:
