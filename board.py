@@ -296,8 +296,8 @@ class Board:
                     if target_square.is_empty() or target_square.has_enemy_piece(piece.color):
                         
                         #creation des squares du déplacement
-
-                        move=Move(piece,Square(row,col),Square(move_row,move_col,target_square.piece))
+                        move_type = "capture" if target_square.has_enemy_piece(piece.color) else "move"
+                        move=Move(piece,Square(row,col),Square(move_row,move_col,target_square.piece),move_type)
                         if not self.will_check(piece, move) if check_check else True:
                             piece.moves.append(move)
             
@@ -449,3 +449,18 @@ class Board:
                 return True
         return False
     
+    def is_checkmate(self,player_color):
+        if self.check(player_color):
+            rescue_moves = []
+            for row in range(rows):
+                for col in range(cols):
+                    piece = self.squares[row][col].piece
+
+                    if piece != None:
+                        if piece.color == player_color:
+                            moves = self.calculate_possible_moves(piece,check_check=False)
+                            if len(piece.moves) > 0:
+                                return True
+                            
+        return False
+

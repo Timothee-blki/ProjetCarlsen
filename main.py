@@ -139,7 +139,30 @@ class Main():
                     pygame.quit()
                     sys.exit()
 
-            
+            #Verifie si La partie est finie
+            if board.is_checkmate(game.next_player):
+                joueur = 'blancs' if game.next_player == 'black' else 'noirs'
+                print(f'Échec et mat ! Victoire des {joueur} !')
+
+                # Boucle figée en attendant fermeture
+                game_over = True
+                while game_over:
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            pygame.quit()
+                            sys.exit()
+
+                    game.show_background(screen)
+                    game.show_last_move(screen)
+                    game.show_pieces(screen)
+
+                    # Affiche le message de fin (facultatif)
+                    font = pygame.font.SysFont(None, 48)
+                    text = font.render(f'Échec et mat ! Victoire des {joueur} !', True, (255, 0, 0))
+                    rect = text.get_rect(center=(width // 2, height // 2))
+                    screen.blit(text, rect)
+
+                    pygame.display.update()
 
             pygame.display.update()
         
