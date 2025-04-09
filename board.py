@@ -32,6 +32,9 @@ class Board:
         '''
         (row_pawns,row_others) = (6,7) if color=="white" else (1,0)
 
+        self.squares[3][1] = Square(3,1, Pawn('white'))
+        self.squares[3][1].piece.update_position((3,1)) 
+
         #Pawns
         for col in range(cols):
             self.squares[row_pawns][col] = Square(row_pawns,col, Pawn(color))
@@ -74,6 +77,29 @@ class Board:
 
 ### METHODE DE CALCUL ET MISES A JOUR
 
+    def calculate_score(self):
+        score = 0
+        for row in range(rows):
+            for col in range(cols):
+                piece = self.squares[row][col].piece
+                if piece != None:
+                    piece_value = piece.board[row][col]
+                    score += piece_value
+        return round(score,3)
+
+    def calculate_all_possible_moves(self,player_color):
+        possible_moves=[]
+        for row in range(rows):
+            for col in range(cols):
+                piece = self.squares[row][col].piece
+                if piece != None and piece.color == player_color:
+
+                    self.calculate_possible_moves(piece)
+                    for move in piece.moves:
+                        possible_moves.append(move)
+
+        return possible_moves     
+
     def calculate_possible_moves(self,piece, check_check=True):
         piece.moves =[]
         row,col = piece.row,piece.col
@@ -87,6 +113,8 @@ class Board:
                 move_row = row + piece.dir
                 move_col = col
                 move = Move(piece,Square(row, col), Square(move_row, move_col))
+                if move_row in [0,7]:
+                    move.type = 'promote'
                 if not self.will_check(piece, move) if check_check else True:
                     piece.moves.append(move)
 
@@ -104,6 +132,8 @@ class Board:
                 move_row = row + piece.dir
                 move_col = col -1
                 move = Move(piece,Square(row, col), Square(move_row,move_col, target_square.piece),'capture')
+                if move_row in [0,7]:
+                    move.type = 'promote'
 
                 if target_square.has_enemy_piece(piece.color) : #prise classique
                     if not self.will_check(piece, move) if check_check else True:
@@ -120,7 +150,9 @@ class Board:
                 move_row = row + piece.dir
                 move_col = col +1
                 move = Move(piece,Square(row, col), Square(move_row,move_col, target_square.piece),'capture')
-                
+                if move_row in [0,7]:
+                    move.type = 'promote'
+
                 if target_square.has_enemy_piece(piece.color): #prise classique
                     if not self.will_check(piece, move) if check_check else True:
                         piece.moves.append(move)
@@ -218,7 +250,7 @@ class Board:
                     target_square = self.squares[move_row][move_col]
                     if target_square.is_empty():
 
-                        move = Move(piece,Square(row, col), Square(move_row, move_col,target_square.piece))
+                        move = Move(piece,Square(row, col), Square(move_row, move_col))
                         if not self.will_check(piece, move) if check_check else True:
                             piece.moves.append(move)
 
@@ -315,7 +347,6 @@ class Board:
                         #déplacement de la tour
                         move = Move(right_rook,Square(row,right_rook.col),Square(row,5),'none')
                         if not self.will_check(right_rook, move) if check_check else True:
-                            print(move)
                             right_rook.moves.append(move)
 
                         #déplacement du roi
@@ -383,12 +414,6 @@ class Board:
         return False
 
         #return move in piece.moves
-    
-    def play_movetype_sound(self,move_type):
-        if move_type == 'capture':
-            self.capture_sound.play()
-        else : 
-            self.move_sound.play()
 
     def promote(self,piece,row):
         chosen_piece = [
@@ -402,10 +427,14 @@ class Board:
             'bishop'           
         ]
 
-        self.squares[piece.row][piece.col] = Square(piece.row,piece.col,Piece(chosen_piece[row],piece.color,piece.value))
+        self.squares[piece.row][piece.col] = Square(piece.row,piece.col,Piece(chosen_piece[row],piece.color))
         self.squares[piece.row][piece.col].piece.update_position((piece.row,piece.col))
 
     def check(self,player_color):
+        '''
+        Retourne True si l'un des moves du joueur adverse met le roi en echec
+        Retourne False sinon
+        '''
         for row in range(rows):
             for col in range(cols):
                 piece = self.squares[row][col].piece
@@ -450,17 +479,24 @@ class Board:
         return False
     
     def is_checkmate(self,player_color):
+        '''
+        Verifie si le joueur correspondant à la couleur donnée est en echec et mat
+        '''
         if self.check(player_color):
-            rescue_moves = []
             for row in range(rows):
                 for col in range(cols):
                     piece = self.squares[row][col].piece
 
                     if piece != None:
                         if piece.color == player_color:
-                            moves = self.calculate_possible_moves(piece,check_check=False)
+                            self.calculate_possible_moves(piece)
                             if len(piece.moves) > 0:
-                                return True
+                                return False
                             
+            return True
         return False
 
+    def is_promoting(self,move):
+        if move.type == 'promote':
+            return True
+        return False

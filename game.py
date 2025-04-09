@@ -3,6 +3,7 @@ import os
 
 from board import Board
 from dragger import Dragger 
+from AI import AI
 from piece import *
 from const import *
 
@@ -11,9 +12,9 @@ class Game:
     def __init__(self,player_color = 'white'):
         self.board = Board()
         self.dragger = Dragger()
+        self.AI = AI(player_color)
         self.next_player = 'white'
         self.player_color = player_color
-        self.promoting = False
 
 ### METHODES D'AFFICHAGE
 
@@ -127,7 +128,6 @@ class Game:
         color = piece.color
         row = piece.row
         col = piece.col
-        self.promoting = True
 
         if self.player_color == 'white':
             possible_piece = [
@@ -175,7 +175,7 @@ class Game:
     def next_turn(self):
         self.next_player = 'white' if self.next_player == 'black' else 'black'
 
-    def reset(self):
-        self.__init__(self.player_color)
+    def reset(self,player_color):
+        self.__init__(player_color)
 
 
