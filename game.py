@@ -3,7 +3,6 @@ import os
 
 from board import Board
 from dragger import Dragger 
-from AI import AI
 from player import Player
 from piece import *
 from const import *
@@ -187,7 +186,7 @@ class Game:
         if self.gamemode == 'player_game':
             self.player_view = self.next_player
 
-    def reset(self,player_color):
-        self.__init__(player_color)
+    def reset(self):
+        self.__init__(player1_type=self.player1.type,player2_type=self.player2.type)
 
 

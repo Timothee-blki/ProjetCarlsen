@@ -13,3 +13,8 @@ class Player:
     
     def is_human(self):
         return self.type =='human'
+    
+    def change_color(self):
+        self.color = 'white' if self.color == 'black' else 'black'
+        if self.type == 'AI':
+            self.AI.color = self.color

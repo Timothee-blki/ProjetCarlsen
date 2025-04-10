@@ -12,6 +12,7 @@ class Main():
 
     def __init__(self):
         self.game=Game(player1_type='human',player2_type='AI')
+        self.player = self.game.player1
 
 
         pygame.init()#Initie l'application
@@ -107,20 +108,19 @@ class Main():
 
     def reset_game(self,change_color = False):
         """Réinitialise le jeu en réaffectant les instances."""
-        if change_color == True:
-            color = 'white' if self.game.player_color == 'black' else 'black'
-            self.game.reset(color)
-        else:
-            self.game.reset(self.game.player_color)
 
         # Réaffecter les variables locales après réinitialisation
-        self.game = self.game  # Réinstancier le jeu
-        self.board = self.game.board  # Réinstancier le plateau
-        self.dragger = self.game.dragger  # Réinstancier le dragger
-        self.AI = self.game.AI  # Réinstancier l'AI
+        self.game.reset()
+        self.game.set_gamemode()
+        self.player = self.game.player1 if self.player == self.game.player2 else self.game.player2
+
+        # Changer de côté change_color = True
+        if change_color:
+            self.game.player1.change_color()
+            self.game.player2.change_color()
+            self.game.next_player,self.game.previous_player = self.game.previous_player, self.game.next_player
 
     def mainloop(self):
-        player = self.game.player1
 
         while True:
 
@@ -133,7 +133,7 @@ class Main():
                     self.update_display(self.game,self.game.dragger,self.screen)   
                     
                 else:
-                    time.sleep(0.01)
+                    time.sleep(0.1)
                     self.AI_turn(self.game.player1.AI,self.game.board,self.game)
                     self.update_display(self.game,self.game.dragger,self.screen)   
             
@@ -143,12 +143,13 @@ class Main():
                     self.update_display(self.game,self.game.dragger,self.screen)   
                     
                 else:
-                    time.sleep(0.01)
+                    time.sleep(0.1)
                     self.AI_turn(self.game.player2.AI,self.game.board,self.game)
                     self.update_display(self.game,self.game.dragger,self.screen) 
 
 
-            if player == self.game.previous_player:
+            if self.player == self.game.previous_player:
+                print('nouveau tour')
                 #Verifie s'il y a echec et mat
                 if self.game.board.is_checkmate(self.game.next_player.color):
                     joueur = 'blancs' if self.game.next_player == 'black' else 'noirs'
@@ -256,7 +257,8 @@ class Main():
                             promotion_choice = self.game.player2.AI.choose_promotion(self.game.board.last_move)
                         self.game.board.promote(self.game.board.last_move.piece,promotion_choice)
                         self.game.board.last_move.type='has promote'
-                player = self.game.next_player
+                
+                self.player = self.game.next_player
         
 main=Main()
 main.mainloop()
