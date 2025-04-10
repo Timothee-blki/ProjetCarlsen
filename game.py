@@ -4,23 +4,28 @@ import os
 from board import Board
 from dragger import Dragger 
 from AI import AI
+from player import Player
 from piece import *
 from const import *
 
 class Game:
 
-    def __init__(self,player_color = 'white'):
+    def __init__(self, player1_type = 'human', player2_type = 'human'):
         self.board = Board()
         self.dragger = Dragger()
-        self.AI = AI(player_color)
-        self.next_player = 'white'
-        self.player_color = player_color
+        self.player1 = Player('white', player1_type)
+        self.player2 = Player('black', player2_type)
+        self.gamemode = 'none'
+        self.set_gamemode()
+        self.next_player = self.player1
+        self.previous_player = self.player2
+        self.player_view = self.player1
 
 ### METHODES D'AFFICHAGE
 
     def show_background(self, surface):
         '''
-        Méthode pour créer les cases graphique de l'échiquier. Il s'agit du fond d'ecran, on dessine un carré par un carré
+        Méthode pour créer les cases graphique de l'échiquier. Il s'agit du fond d'ecran du jeu.
         '''
         # 1) Parcours de chaque case 
         for row in range(rows):
@@ -28,20 +33,20 @@ class Game:
        
         # 2) Choix de la couleur en fonction de la position
                 if (row + col)%2 == 0:
-                    color=(234,235,200) if self.player_color == 'white' else (119,154,88)
+                    color=(234,235,200) if self.player_view.color == 'white' else (119,154,88)
                 else:
-                    color=(119,154,88) if self.player_color == 'white' else (234,235,200)
+                    color=(119,154,88) if self.player_view.color == 'white' else (234,235,200)
         # 3) Dessine le carré 
                 square = (col*square_size,row*square_size,square_size,square_size) 
                 pygame.draw.rect(surface,color,square)
 
         # 4) Dessine le nom des lignes et colonnes
                 font = pygame.font.SysFont('monospace',18,bold=True)
-                row_names = ['a','b','c','d','e','f','g','h'] if self.player_color == 'white' else ['h','g','f','e','d','c','b','a']
-                col_names = ['8','7','6','5','4','3','2','1'] if self.player_color == 'white' else ['1','2','3','4','5','6','7','8']
+                row_names = ['a','b','c','d','e','f','g','h'] if self.player_view.color == 'white' else ['h','g','f','e','d','c','b','a']
+                col_names = ['8','7','6','5','4','3','2','1'] if self.player_view.color == 'white' else ['1','2','3','4','5','6','7','8']
 
                 if col == 0 : #Dessine le nom des colonnes
-                    if self.player_color == 'white':
+                    if self.player_view.color == 'white':
                         name_color = (119,154,88) if (row)%2 == 0 else (234,235,200)
                     else:
                         name_color = (234,235,200) if (row)%2 == 0 else (119,154,88)
@@ -50,7 +55,7 @@ class Game:
                     surface.blit(name,name_position)
 
                 if row == 7 : #Dessine le nom des lignes
-                    if self.player_color == 'white':
+                    if self.player_view.color == 'white':
                         name_color = (119,154,88) if (row+col)%2 == 0 else (234,235,200)
                     else:
                         name_color = (234,235,200) if (row+col)%2 == 0 else (119,154,88)
@@ -75,14 +80,14 @@ class Game:
                     #Verifie que la piece n'est pas en déplacement pour l'afficher
                     if self.dragger.piece != piece:
                         img = pygame.image.load(piece.image) #je charge l'image de la piece
-                        if self.player_color == 'white':
+                        if self.player_view.color == 'white':
                             img_center = col*square_size + square_size//2, row*square_size + square_size//2 #Je calcule la position dans l'echiquier du centre de l'image
                         else:
                             img_center = (7-col)*square_size + square_size//2, (7-row)*square_size + square_size//2
                         piece.image_rect = img.get_rect(center = img_center) # je place l'image centrée sur la position calculée
                         surface.blit(img, piece.image_rect) #affiche l'image
 
-    def show_piece_possible_moves(self,surface,board):
+    def show_piece_possible_moves(self,surface):
 
         piece = self.dragger.piece
         circle_radius = square_size // 5
@@ -92,11 +97,11 @@ class Game:
 
         # loop all valid moves
         for move in piece.moves:
-            if self.player_color=='white':
+            if self.player_view.color == 'white':
                 center = ((move.final_cell.col +0.5) * square_size , (move.final_cell.row + 0.5) * square_size)
             else : 
                 center= ((7-move.final_cell.col +0.5) * square_size , (7-move.final_cell.row + 0.5) * square_size)
-            #if board.squares[move.final_cell.row][move.final_cell.col].has_piece():
+
             if move.type == 'capture' or move.type=='en passant':
                 color = (140,30,30) if ((move.final_cell.col + move.final_cell.row)%2 == 0) else (100,10,10)
                 pygame.draw.circle(surface, color, center, ring_radius, thickness)
@@ -111,9 +116,8 @@ class Game:
 
             color = (230, 230, 100)
 
-
             #Calcule les cases
-            if self.player_color == 'white':
+            if self.player_view.color == 'white':
                 last_square = (last_cell.col*square_size,last_cell.row*square_size,square_size,square_size) 
                 actual_square = (actual_cell.col*square_size,actual_cell.row*square_size,square_size,square_size) 
             else: 
@@ -129,7 +133,7 @@ class Game:
         row = piece.row
         col = piece.col
 
-        if self.player_color == 'white':
+        if self.previous_player.color == 'white':
             possible_piece = [
             Rook(color),
             Queen(color),
@@ -146,7 +150,7 @@ class Game:
 
         box_width = 100
         box_height = 4*100
-        if self.player_color == 'white':
+        if self.previous_player.color == 'white':
             box_x = int(col*square_size)
             box_y = 0 if color =='white' else 400 
         else:
@@ -160,7 +164,7 @@ class Game:
 
         for piece in possible_piece:
             img = pygame.image.load(piece.image) #je charge l'image de la piece
-            if self.player_color == 'white':
+            if self.previous_player.color == 'white':
                 img_center = col*square_size + square_size//2, (row+i)*square_size - (box_y-100)*box_y//400 + square_size//2 #Je calcule la position dans l'echiquier du centre de l'image
             else:
                 img_center = (7-col)*square_size + square_size//2, (7-row+i)*square_size - (box_y-100)*box_y//400 + square_size//2
@@ -171,9 +175,17 @@ class Game:
 
 
 ### METHODES DE JEU
+    def set_gamemode(self):
+        if self.player1.type == 'human' and self.player2.type == 'human':
+            self.gamemode = "player_game"
+        else:
+            self.gamemode = "AI_game"
 
     def next_turn(self):
-        self.next_player = 'white' if self.next_player == 'black' else 'black'
+        self.previous_player = self.next_player
+        self.next_player = self.player1 if self.next_player == self.player2 else self.player2
+        if self.gamemode == 'player_game':
+            self.player_view = self.next_player
 
     def reset(self,player_color):
         self.__init__(player_color)

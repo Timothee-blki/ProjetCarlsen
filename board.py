@@ -10,7 +10,7 @@ class Board:
   
     def __init__(self):
         self.squares = [[0,0,0,0,0,0,0,0] for col in range(cols)] #Creation des cases mathématiques de l'équiquier sous forme de tableau
-        self.last_move = Move(None,Square(-1,-1),Square(-1,-1))
+        self.last_move = Move(Pawn('white'),Square(-1,-1),Square(-1,-1))
         self._create()
         self._add_piece("white") #on place les pieces blanches
         self._add_piece("black") #on place les pieces noires
@@ -32,8 +32,6 @@ class Board:
         '''
         (row_pawns,row_others) = (6,7) if color=="white" else (1,0)
 
-        self.squares[3][1] = Square(3,1, Pawn('white'))
-        self.squares[3][1].piece.update_position((3,1)) 
 
         #Pawns
         for col in range(cols):
@@ -472,7 +470,7 @@ class Board:
         return False
 
     def is_en_passant_valid(self,move):
-        if self.last_move.piece == self.squares[move.initial_cell.row][move.final_cell.col].piece:
+        if self.last_move.piece.name =='pawn' and  self.last_move.piece == self.squares[move.initial_cell.row][move.final_cell.col].piece:
             diff = abs(self.last_move.final_cell.row - self.last_move.initial_cell.row) 
             if diff >1:
                 return True
@@ -482,22 +480,14 @@ class Board:
         '''
         Verifie si le joueur correspondant à la couleur donnée est en echec et mat
         '''
-        if self.check(player_color):
-            for row in range(rows):
-                for col in range(cols):
-                    piece = self.squares[row][col].piece
-
-                    if piece != None:
-                        if piece.color == player_color:
-                            self.calculate_possible_moves(piece)
-                            if len(piece.moves) > 0:
-                                return False
-                            
+        if self.check(player_color) and self.calculate_all_possible_moves(player_color) == []:  
             return True
         return False
 
-    def is_pat(self):
-        pass
+    def is_pat(self,player_color):
+        if self.calculate_all_possible_moves(player_color) == []:
+            return True
+        return False
 
     def is_promoting(self,move):
         if move.type == 'promote':

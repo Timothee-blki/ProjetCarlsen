@@ -6,8 +6,8 @@ from square import Square
 
 class AI():
 
-    def __init__(self,opponent_color):
-        self.color = 'black' if opponent_color =='white' else 'white'
+    def __init__(self,color):
+        self.color = color
 
     def random_choose(self,board):
         possible_moves = board.calculate_all_possible_moves(self.color) 
