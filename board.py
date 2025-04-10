@@ -10,7 +10,7 @@ class Board:
   
     def __init__(self):
         self.squares = [[0,0,0,0,0,0,0,0] for col in range(cols)] #Creation des cases mathématiques de l'équiquier sous forme de tableau
-        self.last_move = None
+        self.last_move = Move(None,Square(-1,-1),Square(-1,-1))
         self._create()
         self._add_piece("white") #on place les pieces blanches
         self._add_piece("black") #on place les pieces noires
@@ -495,6 +495,9 @@ class Board:
                             
             return True
         return False
+
+    def is_pat(self):
+        pass
 
     def is_promoting(self,move):
         if move.type == 'promote':

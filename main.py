@@ -1,5 +1,6 @@
 import pygame  # type: ignore
 import sys
+import time
 
 from const import *
 from game import Game
@@ -17,125 +18,127 @@ class Main():
         self.screen = pygame.display.set_mode((width,height)) #Ouvre une fenetre pyagme
         pygame.display.set_caption("Chess") #Donne un titre à la fenetre
 
-    def mainloop(self):
+    def AI_turn(self,AI,board,game):
+        move = AI.random_choose(self.game.board)
+        if move.piece != None:
+            print(move.piece.name,move.final_cell.row,move.final_cell.col)
+            board.confirm_move(move.piece, move)
+            game.next_turn()
+    
+    def player_turn(self,board,game,dragger):
         
-        screen = self.screen
-        game = self.game
-        board = self.game.board
-        dragger = self.game.dragger
-        AI = self.game.AI
+        for event in pygame.event.get():
 
-        move = Move(None,Square(0,0),Square(0,0))
+                # 1) Click 
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    
+                    #Calcul de la case (row,col) de la position cliquée
+                    position = event.pos #recup position
+                    
+                    if game.player_color == 'white':
+                        clicked_row = int(position[1]//square_size) #Ligne
+                        clicked_col = int(position[0]//square_size) #Colonne
+                    else:
+                        clicked_row = 7-int(position[1]//square_size) #Ligne
+                        clicked_col = 7-int(position[0]//square_size) #Colonne
 
+
+                    #Si on selectionne une pièce, on la garde en mémoire
+                    if self.game.board.squares[clicked_row][clicked_col].piece != None and self.game.board.squares[clicked_row][clicked_col].piece.color == game.next_player:
+                        dragger.update_drag_position(position,game.next_player) #update la position de la case cliquée
+                        dragger.piece = self.game.board.squares[clicked_row][clicked_col].piece
+                        dragger.start_drag(dragger.piece) # On indique qu'on a commencé à deplacer une piece
+                        board.calculate_possible_moves(dragger.piece) # on calcule les déplacements possibles de la piece
+
+                # 2) Déclick
+                if event.type == pygame.MOUSEBUTTONUP and dragger.piece != None:
+
+                    #Calcul de la case (row,col) de la position décliquée
+                    position = event.pos #recup position
+                    if game.player_color == 'white':
+                        declicked_row = int(position[1]//square_size) #Ligne
+                        declicked_col = int(position[0]//square_size) #Colonne
+                    else:
+                        declicked_row = 7-int(position[1]//square_size) #Ligne
+                        declicked_col = 7-int(position[0]//square_size) #Colonne
+    
+                    #Si une autre case est selectionnée, on déplace la piece cliquée sur cette case
+                    move = Move(dragger.piece,Square(dragger.piece.row,dragger.piece.col),Square(declicked_row,declicked_col))
+                            
+                    #Si le déplacement choisit est valide et qu'elle appartient au bon joueur
+                    if board.valid_move(dragger.piece,move):
+                        board.confirm_move(dragger.piece, move)
+                        game.next_turn()
+                        
+                    dragger.stop_drag() #On indique que l'on a cesser de déplacer la piece
+
+                # 3) Souris en mouvement 
+                if event.type == pygame.MOUSEMOTION:
+                    if dragger.dragging:
+                        dragger.update_drag_position(event.pos,game.player_color)
+                    
+                # 4) Touche appuyée
+                if event.type == pygame.KEYDOWN : 
+
+                    #Recommencer la partie
+                    if event.key == pygame.K_r:
+                        self.reset_game()
+
+                        
+                    if event.key == pygame.K_p:
+                        self.reset_game(change_color=True)
+
+
+                # 5) Quitter
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+    def update_display(self, game, board, dragger,screen):
+        """Fonction pour mettre à jour l'affichage après chaque coup ou pendant un drag d'une piece."""
+        game.show_background(screen)  # Dessine l'échiquier
+        game.show_last_move(screen)   # Dessine le dernier déplacement
+        game.show_pieces(screen)      # Redessine toutes les pièces
+
+        if dragger.dragging:
+            game.show_piece_possible_moves(screen, board)  # Montre les déplacements possibles
+            dragger.show_drag(screen) # Montre la pièce en train de se déplacer
+
+        pygame.display.update()  # Actualisation de l'affichage
+
+    def reset_game(self,change_color = False):
+        """Réinitialise le jeu en réaffectant les instances."""
+        if change_color == True:
+            color = 'white' if self.game.player_color == 'black' else 'black'
+            self.game.reset(color)
+        else:
+            self.game.reset(self.game.player_color)
+
+        # Réaffecter les variables locales après réinitialisation
+        self.game = self.game  # Réinstancier le jeu
+        self.board = self.game.board  # Réinstancier le plateau
+        self.dragger = self.game.dragger  # Réinstancier le dragger
+        self.AI = self.game.AI  # Réinstancier l'AI
+
+    def mainloop(self):
 
         while True:
 
-            ### AFFICHAGE PRINCIPAL ###
-            game.show_background(screen)  # Dessine l'échiquier
-            game.show_last_move(screen)
-            game.show_pieces(screen)  # Redessine toutes les pièces            
+            self.update_display(self.game,self.game.board,self.game.dragger,self.screen)        
 
-            #Si une piece est en déplacement:
-            if dragger.dragging:
- 
-                game.show_piece_possible_moves(screen,board) #montre les déplacements possibles 
-                dragger.show_drag(screen) # montre la piece
-
-
-            if game.next_player == game.player_color:
-
-                ### CONTROLE D'EVENEMENT ###
-
-                for event in pygame.event.get():
-
-                    # 1) Click 
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        
-                        #Calcul de la case (row,col) de la position cliquée
-                        position = event.pos #recup position
-                        
-                        if game.player_color == 'white':
-                            clicked_row = int(position[1]//square_size) #Ligne
-                            clicked_col = int(position[0]//square_size) #Colonne
-                        else:
-                            clicked_row = 7-int(position[1]//square_size) #Ligne
-                            clicked_col = 7-int(position[0]//square_size) #Colonne
-
-
-                        #Si on selectionne une pièce, on la garde en mémoire
-                        if self.game.board.squares[clicked_row][clicked_col].piece != None and self.game.board.squares[clicked_row][clicked_col].piece.color == game.next_player:
-                            dragger.update_drag_position(position,game.next_player) #update la position de la case cliquée
-                            dragger.piece = self.game.board.squares[clicked_row][clicked_col].piece
-                            dragger.start_drag(dragger.piece) # On indique qu'on a commencé à deplacer une piece
-                            board.calculate_possible_moves(dragger.piece) # on calcule les déplacements possibles de la piece
-
-                    # 2) Déclick
-                    if event.type == pygame.MOUSEBUTTONUP and dragger.piece != None:
-
-                        #Calcul de la case (row,col) de la position décliquée
-                        position = event.pos #recup position
-                        if game.player_color == 'white':
-                            declicked_row = int(position[1]//square_size) #Ligne
-                            declicked_col = int(position[0]//square_size) #Colonne
-                        else:
-                            declicked_row = 7-int(position[1]//square_size) #Ligne
-                            declicked_col = 7-int(position[0]//square_size) #Colonne
-    
-
-                        #Si une autre case est selectionnée, on déplace la piece cliquée sur cette case
-                        move = Move(dragger.piece,Square(dragger.piece.row,dragger.piece.col),Square(declicked_row,declicked_col))
-                            
-                        #Si le déplacement choisit est valide et qu'elle appartient au bon joueur
-                        if board.valid_move(dragger.piece,move):
-                            board.confirm_move(dragger.piece, move)
-                            if dragger.piece.name == 'pawn' and move.final_cell.row in [0,7]:
-                                game.show_promotion(screen,dragger.piece)
-                                game.next_turn()
-                                break
-                            game.next_turn()
-                        dragger.stop_drag() #On indique que l'on a cesser de déplacer la piece
-
-                    # 3) Souris en mouvement 
-                    if event.type == pygame.MOUSEMOTION:
-                        if dragger.dragging:
-                            dragger.update_drag_position(event.pos,game.player_color)
-                    
-                    # 4) Touche appuyée
-                    if event.type == pygame.KEYDOWN : 
-
-                        #Recommencer la partie
-                        if event.key == pygame.K_r:
-                            game.reset(game.player_color)
-                            game = self.game
-                            board = self.game.board
-                            dragger = self.game.dragger
-                        
-                        if event.key == pygame.K_p:
-                            #recommence la partie
-
-                            #change la couleur
-                            player_color = 'black' if game.player_color == 'white' else 'white'
-                            game.reset(player_color)
-                            game = self.game
-                            board = self.game.board
-                            dragger = self.game.dragger
-
-                            AI = self.game.AI
-
-                    # 5) Quitter
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-
+            if self.game.next_player == self.game.player_color:
+                self.player_turn(self.game.board,self.game,self.game.dragger)
+                self.update_display(self.game,self.game.board,self.game.dragger,self.screen)   
+                
             else:
-                move = AI.random_choose(self.game.board)
-                if move.piece != None:
-                    board.confirm_move(move.piece, move)
-                game.next_turn()
+                time.sleep(0.3)
+                self.AI_turn(self.game.AI,self.game.board,self.game)
+                self.update_display(self.game,self.game.board,self.game.dragger,self.screen)   
+            
 
-            #Verifie si La partie est finie
-            if board.is_checkmate(game.next_player):
-                joueur = 'blancs' if game.next_player == 'black' else 'noirs'
+            #Verifie s'il y a echec et mat
+            if self.game.board.is_checkmate(self.game.next_player):
+                joueur = 'blancs' if self.game.next_player == 'black' else 'noirs'
                 print(f'Échec et mat ! Victoire des {joueur} !')
 
                 # Boucle figée en attendant fermeture
@@ -146,45 +149,42 @@ class Main():
                         if event.type == pygame.KEYDOWN : 
                             #Recommencer la partie
                             if event.key == pygame.K_r:
-                                game.reset(game.player_color)
-                                game = self.game
-                                board = self.game.board
-                                dragger = self.game.dragger
-                                game_over=False
-
+                                self.reste_game()
 
                         if event.type == pygame.QUIT:
                             pygame.quit()
                             sys.exit()
 
-                    game.show_background(screen)
-                    game.show_last_move(screen)
-                    game.show_pieces(screen)
+                    self.game.show_background(self.screen)
+                    self.game.show_last_move(self.screen)
+                    self.game.show_pieces(self.screen)
 
                     # Affiche le message de fin 
                     font = pygame.font.SysFont(None, 48)
                     text = font.render(f'Échec et mat ! Victoire des {joueur} !', True, (0, 0, 0))
                     rect = text.get_rect(center=(width // 2, height // 2))
-                    screen.blit(text, rect)
+                    self.screen.blit(text, rect)
 
                     pygame.display.update()
             
+            #Verifie s'il y a pat
+            if self.game.board.is_pat():
+                pass
+
             #S'il y a une promotion en cours 
-            if board.is_promoting(move):
+            if self.game.board.is_promoting(self.game.board.last_move):
 
                 #Boucle figée en attendant choix 
-                if game.next_player != game.player_color:
+                if self.game.next_player != self.game.player_color:
                     game_promoting = True
                     while game_promoting:
 
-                    
-
                         for event in pygame.event.get():
 
-                            game.show_background(screen)
-                            game.show_last_move(screen)
-                            game.show_pieces(screen)
-                            game.show_promotion(screen, move.piece)
+                            self.game.show_background(self.screen)
+                            self.game.show_last_move(self.screen)
+                            self.game.show_pieces(self.screen)
+                            self.game.show_promotion(self.screen, self.game.board.last_move.piece)
 
 
                             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -192,7 +192,7 @@ class Main():
                                 #Calcul de la case (row,col) de la position cliquée
                                 position = event.pos #recup position
                                 
-                                if game.player_color == 'white':
+                                if self.game.player_color == 'white':
                                     clicked_row = int(position[1]//square_size) #Ligne
                                     clicked_col = int(position[0]//square_size) #Colonne
                                 else:
@@ -200,10 +200,10 @@ class Main():
                                     clicked_col = 7-int(position[0]//square_size) #Colonne
 
                                 
-                                if ((move.piece.color == 'white' and clicked_row in [0,1,2,3]) or (move.piece.color != 'white' and clicked_row in [4,5,6,7]) ) and clicked_col == move.piece.col:
-                                    board.promote(move.piece,clicked_row)
+                                if ((self.game.board.last_move.piece.color == 'white' and clicked_row in [0,1,2,3]) or (self.game.board.last_move.piece.color != 'white' and clicked_row in [4,5,6,7]) ) and clicked_col == self.game.board.last_move.piece.col:
+                                    self.game.board.promote(self.game.board.last_move.piece,clicked_row)
                                     game_promoting = False
-                                    dragger.stop_drag()
+                                    self.game.dragger.stop_drag()
 
                             if event.type == pygame.QUIT:
                                 pygame.quit()
@@ -212,15 +212,10 @@ class Main():
                         pygame.display.update()
 
                 else: 
-                    promotion_choice = AI.choose_promotion(move)
-                    board.promote(move.piece,promotion_choice)
-                    move.type='has promote'
-
-
-            pygame.display.update()
+                    promotion_choice = self.game.AI.choose_promotion(self.game.board.last_move)
+                    self.game.board.promote(self.game.board.last_move.piece,promotion_choice)
+                    self.game.board.last_move.type='has promote'
+            
         
-
-
-
 main=Main()
 main.mainloop()
